@@ -8,6 +8,11 @@ import numpy as np
 def main():
     args = parse_args()
     image = cv.imread(args.input, cv.IMREAD_UNCHANGED)
+    channels = np.shape(image)[2]
+    if channels != 4:
+        print("Expected image in RGBA format, but this image "
+              "has %d channels, not 4" % channels)
+        exit(-1)
 
     # add border, so we can place registration markers
     b_size = 120
@@ -86,7 +91,8 @@ def get_colours(image):
 def parse_args():
     description = '''
     Takes a PNG, outputs an SVG.  Can turn the output from st_split_layers.py
-    into files useful for laser cutting, etc.
+    into files useful for laser cutting, etc.  Input PNG must have an alpha channel;
+    the SVG is created by finding borders between transparent and opaque regions.
     '''
 
     parser = argparse.ArgumentParser(description=description)
