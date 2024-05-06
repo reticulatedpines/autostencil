@@ -43,9 +43,9 @@ def main():
     save_contours_to_svg(contours, args.output, width, height)
 
 
-def save_contours_to_svg(contours, filename, width, height):
+def save_contours_to_svg(contours, filename, width, height, fill_colour="none"):
     with open(filename, "w+") as f:
-        f.write('<svg fill="none" '
+        f.write('<svg fill="%s" ' % fill_colour
                 + 'width="' + str(width) + '" height="' + str(height)
                 + '" xmlns="http://www.w3.org/2000/svg">')
 
