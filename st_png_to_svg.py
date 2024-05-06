@@ -46,6 +46,9 @@ def main():
                                           cv.RETR_TREE,
                                           cv.CHAIN_APPROX_SIMPLE)
 
+    if (args.size_filter):
+        contours = [c for c in contours if cv.contourArea(c) > args.size_filter]
+
     if args.debug_output:
         # draw contours for debugging
         colour = (0, 255, 0, 255)
@@ -62,22 +65,23 @@ def main():
 def save_contours_to_svg(contours, filename, width, height, fill_colour="none"):
     with open(filename, "w+") as f:
         f.write('<svg fill="%s" ' % fill_colour
+                + 'fill-opacity="0.5" '
                 + 'width="' + str(width) + '" height="' + str(height)
                 + '" xmlns="http://www.w3.org/2000/svg">')
 
         for c in contours:
-            f.write('<path d="M')
+            f.write('<path stroke-dasharray="5,5" stroke-width="4" d="M')
             for i in range(len(c)):
                 x, y = c[i][0]
                 f.write("%d %d " % (x, y))
-            f.write('Z" style="stroke:green"/>')
+            f.write('Z" style="stroke:%s"/>' % fill_colour)
 
         # add registration markers
         radius = 25
         offset = radius + 20
         for x in [offset, width - offset]:
             for y in [offset, height - offset]:
-                f.write('<circle cx="%d" cy="%d" r="%d" style="stroke:green"/>' % (x, y, radius))
+                f.write('<circle cx="%d" cy="%d" r="%d" style="stroke:%s"/>' % (x, y, radius, fill_colour))
         f.write("</svg>")
 
 
@@ -113,6 +117,10 @@ def parse_args():
     parser.add_argument("--output", "-o",
                         default="",
                         help="output image file, defaults to input file with extension changed to .svg")
+    parser.add_argument("--size-filter",
+                        default=None,
+                        type=float,
+                        help="if specified, remove regions below this area, e.g. 1.23")
     parser.add_argument("--debug-output", "-d",
                         default="",
                         help="output debug image file")
