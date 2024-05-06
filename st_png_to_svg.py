@@ -14,6 +14,18 @@ def main():
               "has %d channels, not 4" % channels)
         exit(-1)
 
+    # if image contains only one visible colour,
+    # use that for lines and fills
+    colours = get_colours(image)
+    colours = [c for c in colours if c[3] == 255]
+    if len(colours) == 1:
+        c = colours[0]
+        colour_code = "#" + "%02x" % c[2]
+        colour_code += "%02x" % c[1]
+        colour_code += "%02x" % c[0]
+    else:
+        colour_code = "#00ff00"
+
     # add border, so we can place registration markers
     b_size = 120
     image = cv.copyMakeBorder(image, b_size, b_size, b_size, b_size,
@@ -42,10 +54,9 @@ def main():
         image[mask == 0] = (0, 0, 0, 255)
         cv.imwrite(args.debug_output, image)
 
-
     # all regions defined as contours, convert to SVG
     height, width = np.shape(binary_image)
-    save_contours_to_svg(contours, args.output, width, height)
+    save_contours_to_svg(contours, args.output, width, height, fill_colour=colour_code)
 
 
 def save_contours_to_svg(contours, filename, width, height, fill_colour="none"):
