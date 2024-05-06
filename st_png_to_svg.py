@@ -118,9 +118,10 @@ def parse_args():
                         default="",
                         help="output image file, defaults to input file with extension changed to .svg")
     parser.add_argument("--size-filter",
-                        default=None,
+                        default=0.001,
                         type=float,
-                        help="if specified, remove regions below this area, e.g. 1.23")
+                        help="if specified, remove regions below this area, e.g. 1.23.  "
+                             "Default is 0.001; only point-like regions are removed")
     parser.add_argument("--debug-output", "-d",
                         default="",
                         help="output debug image file")
