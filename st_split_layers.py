@@ -10,16 +10,27 @@ def main():
     image = cv.imread(args.input)
     image = cv.cvtColor(image, cv.COLOR_BGR2BGRA)
 
+    layers = get_layers(image)
+    for i, layer in enumerate(layers):
+        image_path = os.path.join(args.output, "layer_%02d.png" % i)
+        cv.imwrite(image_path, layer)
+
+
+def get_layers(image):
+    """
+    Return a list of layers, one per colour in the image
+    """
     # retrieve all unique colours
     colours = get_colours(image)
     
     # create one layer per colour
+    layers = []
     for i, c in enumerate(colours):
         mask = cv.inRange(image, c, c)
         layer = np.copy(image)
         layer[mask == 0] = (0, 0, 0, 0)
-        image_path = os.path.join(args.output, "layer_%02d.png" % i)
-        cv.imwrite(image_path, layer)
+        layers.append(layer)
+    return layers
 
 
 def get_colours(image):
