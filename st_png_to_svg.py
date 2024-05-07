@@ -14,6 +14,18 @@ def main():
               "has %d channels, not 4" % channels)
         exit(-1)
 
+    contours, width, height, fill_colour = convert_rgba_to_contours(image, args.size_filter)
+    svg_data = contours_to_svg_string(contours, width, height, fill_colour=fill_colour)
+    with open(args.output, "w") as f:
+        f.write(svg_data)
+
+
+def convert_rgba_to_contours(image, size_filter=0.0001):
+    """
+    Takes an RGBA image, returns a tuple containing:
+    (list of contours, image_width, image_height, fill_colour),
+    filtered to exclude anything below size_filter in area.
+    """
     # if image contains only one visible colour,
     # use that for lines and fills
     colours = get_colours(image)
@@ -46,43 +58,34 @@ def main():
                                           cv.RETR_TREE,
                                           cv.CHAIN_APPROX_SIMPLE)
 
-    if (args.size_filter):
-        contours = [c for c in contours if cv.contourArea(c) > args.size_filter]
+    contours = [c for c in contours if cv.contourArea(c) > size_filter]
 
-    if args.debug_output:
-        # draw contours for debugging
-        colour = (0, 255, 0, 255)
-        cv.drawContours(image, contours, -1, colour, 1)
-        mask = cv.inRange(image, colour, colour)
-        image[mask == 0] = (0, 0, 0, 255)
-        cv.imwrite(args.debug_output, image)
-
-    # all regions defined as contours, convert to SVG
     height, width = np.shape(binary_image)
-    save_contours_to_svg(contours, args.output, width, height, fill_colour=colour_code)
+    return (contours, width, height, colour_code)
 
 
-def save_contours_to_svg(contours, filename, width, height, fill_colour="none"):
-    with open(filename, "w+") as f:
-        f.write('<svg fill="%s" ' % fill_colour
-                + 'fill-opacity="0.5" '
-                + 'width="' + str(width) + '" height="' + str(height)
-                + '" xmlns="http://www.w3.org/2000/svg">')
+def contours_to_svg_string(contours, width, height, fill_colour="none"):
+    svg = ""
+    svg += '<svg fill="%s" ' % fill_colour \
+               + 'fill-opacity="0.5" ' \
+               + 'width="' + str(width) + '" height="' + str(height) \
+               + '" xmlns="http://www.w3.org/2000/svg">'
 
-        for c in contours:
-            f.write('<path stroke-dasharray="5,5" stroke-width="4" d="M')
-            for i in range(len(c)):
-                x, y = c[i][0]
-                f.write("%d %d " % (x, y))
-            f.write('Z" style="stroke:%s"/>' % fill_colour)
+    for c in contours:
+        svg += '<path stroke-dasharray="5,5" stroke-width="4" d="M'
+        for i in range(len(c)):
+            x, y = c[i][0]
+            svg += "%d %d " % (x, y)
+        svg += 'Z" style="stroke:%s"/>' % fill_colour
 
-        # add registration markers
-        radius = 25
-        offset = radius + 20
-        for x in [offset, width - offset]:
-            for y in [offset, height - offset]:
-                f.write('<circle cx="%d" cy="%d" r="%d" style="stroke:%s"/>' % (x, y, radius, fill_colour))
-        f.write("</svg>")
+    # add registration markers
+    radius = 25
+    offset = radius + 20
+    for x in [offset, width - offset]:
+        for y in [offset, height - offset]:
+            svg += '<circle cx="%d" cy="%d" r="%d" style="stroke:%s"/>' % (x, y, radius, fill_colour)
+    svg += "</svg>"
+    return svg
 
 
 def get_colours(image):
