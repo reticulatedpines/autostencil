@@ -2,3 +2,5 @@ syntax: glob
 .*.swp
 layers/*
 images/*
+__pycache__/*
+todo.txt
