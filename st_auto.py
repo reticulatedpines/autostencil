@@ -5,6 +5,7 @@ import argparse
 import tempfile
 import io
 import zipfile
+import math
 
 import cv2 as cv
 
@@ -15,12 +16,16 @@ import st_png_to_svg
 def main():
     args = parse_args()
     image = cv.imread(args.input)
-    image_size = image.shape[0] * image.shape[1]
 
-    # get output zip name
-    in_name = os.path.basename(args.input) # filename only
-    in_prefix, in_suffix = in_name.rsplit(".", maxsplit=1)
-    out_name = in_prefix + ".zip"
+    # resize if it's large, or processing becomes very slow
+    MAX_SIZE = 2400000 # somewhat larger than 1920 * 1080
+    image_size = image.shape[0] * image.shape[1]
+    if image_size > MAX_SIZE:
+        area_shrink_ratio = image_size / MAX_SIZE
+        linear_shrink = math.sqrt(area_shrink_ratio)
+        image_small = cv.resize(image, (0,0), fx=1 / linear_shrink, fy=1 / linear_shrink)
+        image = image_small
+        image_size = image.shape[0] * image.shape[1]
 
     # st_posterise
     image = posterise(image, max_colours=args.max_colours)
@@ -36,16 +41,25 @@ def main():
     SVGs = [st_png_to_svg.contours_to_svg_string(c[0], c[1], c[2], c[3])
                 for c in con_w_h_colour]
 
+    # get output names for zip
+    in_name = os.path.basename(args.input) # filename only
+    in_prefix, in_suffix = in_name.rsplit(".", maxsplit=1)
+    preview_suffix = ".jpg"
+    preview_name = in_prefix + "_preview" + preview_suffix
+    out_name = in_prefix + ".zip"
+
     # convert the posterised version to something nice
     # to use as a preview
-    res, poster_image = cv.imencode("." + in_suffix, image)
+    res, poster_image = cv.imencode(preview_suffix, image)
 
     # zip the in-memory svg "files"
     mf = io.BytesIO()
     with zipfile.ZipFile(mf, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
         for i, s in enumerate(SVGs):
             zf.writestr("layer_%02d.svg" % i, s)
-        zf.writestr(in_name, poster_image)
+        zf.writestr(preview_name, poster_image)
+        # copy in original
+        zf.write(args.input, os.path.basename(args.input))
 
     # and save!
     with open(out_name, "wb") as f:
