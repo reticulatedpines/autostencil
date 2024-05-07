@@ -17,8 +17,8 @@ def main():
     image = cv.imread(args.input)
 
     # get output zip name
-    in_name = os.path.split(args.input)[1] # filename only
-    in_prefix = in_name.rsplit(".", maxsplit=1)[0]
+    in_name = os.path.basename(args.input) # filename only
+    in_prefix, in_suffix = in_name.rsplit(".", maxsplit=1)
     out_name = in_prefix + ".zip"
 
     # st_posterise
@@ -32,11 +32,16 @@ def main():
     con_w_h_colour = [st_png_to_svg.convert_rgba_to_contours(layer) for layer in layers]
     SVGs = [st_png_to_svg.contours_to_svg_string(c[0], c[1], c[2], c[3]) for c in con_w_h_colour]
 
+    # convert the posterised version to something nice
+    # to use as a preview
+    res, poster_image = cv.imencode("." + in_suffix, image)
+
     # zip the in-memory svg "files"
     mf = io.BytesIO()
     with zipfile.ZipFile(mf, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
         for i, s in enumerate(SVGs):
             zf.writestr("layer_%02d.svg" % i, s)
+        zf.writestr(in_name, poster_image)
 
     # and save!
     with open(out_name, "wb") as f:
