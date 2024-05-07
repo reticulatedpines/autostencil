@@ -23,7 +23,7 @@ def main():
     out_name = in_prefix + ".zip"
 
     # st_posterise
-    image = posterise(image, max_colours=6)
+    image = posterise(image, max_colours=args.max_colours)
 
     # st_split_layers, prior output -> set of single-colour layers
     image_a = cv.cvtColor(image, cv.COLOR_BGR2BGRA)
@@ -63,6 +63,10 @@ def parse_args():
 
     parser.add_argument("input",
                         help="image file")
+    parser.add_argument("--max-colours", "-c",
+                        default=6,
+                        type=int,
+                        help="Max colours (and therefore layers).  Default 6")
 
     args = parser.parse_args()
     if not os.path.isfile(args.input):
