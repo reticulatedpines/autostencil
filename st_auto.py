@@ -15,6 +15,7 @@ import st_png_to_svg
 def main():
     args = parse_args()
     image = cv.imread(args.input)
+    image_size = image.shape[0] * image.shape[1]
 
     # get output zip name
     in_name = os.path.basename(args.input) # filename only
@@ -29,8 +30,11 @@ def main():
     layers = st_split_layers.get_layers(image_a)
 
     # st_png_to_svg, each layer -> svg
-    con_w_h_colour = [st_png_to_svg.convert_rgba_to_contours(layer) for layer in layers]
-    SVGs = [st_png_to_svg.contours_to_svg_string(c[0], c[1], c[2], c[3]) for c in con_w_h_colour]
+    size_filter = image_size * 0.0001 # moderately aggressive trim of small regions
+    con_w_h_colour = [st_png_to_svg.convert_rgba_to_contours(layer, size_filter=size_filter)
+                            for layer in layers]
+    SVGs = [st_png_to_svg.contours_to_svg_string(c[0], c[1], c[2], c[3])
+                for c in con_w_h_colour]
 
     # convert the posterised version to something nice
     # to use as a preview
