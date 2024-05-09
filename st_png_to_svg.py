@@ -26,11 +26,16 @@ def main():
         f.write(svg_data)
 
 
-def convert_rgba_to_contours(image, size_filter=0.0001):
+def convert_rgba_to_contours(image, size_filter=0.0001, remove_nested=True):
     """
     Takes an RGBA image, returns a tuple containing:
-    (list of contours, image_width, image_height, fill_colour),
-    filtered to exclude anything below size_filter in area.
+    (list of contours, image_width, image_height, fill_colour).
+
+    This is filtered to exclude anything below size_filter in area.
+
+    It may also be filtered to remove nested regions; that is, regions that
+    would, if cut from a sheet of material, not be attached after the cut.
+    For some uses, this prevents wasteful cutting.
     """
     # if image contains only one visible colour,
     # use that for lines and fills
@@ -60,9 +65,20 @@ def convert_rgba_to_contours(image, size_filter=0.0001):
     binary_image = cv.extractChannel(image, 1)
     ret, binary_image = cv.threshold(binary_image, 1, 255, cv.THRESH_BINARY)
 
+    if remove_nested:
+        contour_hierarchy = cv.RETR_EXTERNAL
+    else:
+        contour_hierarchy = cv.RETR_TREE
+        
     contours, hierarchy = cv.findContours(binary_image,
-                                          cv.RETR_TREE,
+                                          contour_hierarchy,
                                           cv.CHAIN_APPROX_SIMPLE)
+    # OpenCV hierarchy is an array of
+    # [next, prev, first_child, parent] arrays.  A value of -1
+    # means the element doesn't exist (e.g., -1 in next means no
+    # prior sibling, -1 in parent is no parent, etc).
+    # Other values are the ID of the contour.
+    #print(hierarchy)
 
     contours = [c for c in contours if cv.contourArea(c) > size_filter]
 
