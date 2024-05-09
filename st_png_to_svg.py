@@ -103,6 +103,17 @@ def contours_to_svg_string(contours, width, height, fill_colour="none",
     for x in [offset, width - offset]:
         for y in [offset, height - offset]:
             svg += '<circle cx="%d" cy="%d" r="%d" style="stroke:%s"/>' % (x, y, radius, fill_colour)
+
+    # add border line
+    offset = 5
+    svg += '<polyline points="'
+    svg += "%d, %d " % (offset, offset)
+    svg += "%d, %d " % (offset, height - offset)
+    svg += "%d, %d " % (width - offset, height - offset)
+    svg += "%d, %d " % (width - offset, offset)
+    svg += "%d, %d " % (offset, offset)
+    svg += '" style="fill:none;stroke:%s"/>' % fill_colour
+
     svg += "</svg>"
     return svg
 
