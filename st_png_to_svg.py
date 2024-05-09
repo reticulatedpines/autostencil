@@ -102,8 +102,7 @@ def contours_to_svg_string(contours, width, height, fill_colour="none",
     for c in contours:
         # Lightburn seems to require first point to be a move,
         # e.g. pure curves don't get displayed
-#        svg += '<path stroke-dasharray="5,5" stroke-width="4" d="M'
-        svg += '<path stroke-width="1" d="M'
+        svg += '<path stroke-dasharray="5,5" stroke-width="4" d="M'
         x, y = c[0][0]
         svg += "%d %d " % (x, y)
         if len(c) > 1:
