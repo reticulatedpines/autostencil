@@ -14,8 +14,14 @@ def main():
               "has %d channels, not 4" % channels)
         exit(-1)
 
+    if args.no_curves:
+        curves = False
+    else:
+        curves = True
+
     contours, width, height, fill_colour = convert_rgba_to_contours(image, args.size_filter)
-    svg_data = contours_to_svg_string(contours, width, height, fill_colour=fill_colour)
+    svg_data = contours_to_svg_string(contours, width, height, fill_colour=fill_colour,
+                                      curved_lines=curves)
     with open(args.output, "w") as f:
         f.write(svg_data)
 
@@ -64,18 +70,31 @@ def convert_rgba_to_contours(image, size_filter=0.0001):
     return (contours, width, height, colour_code)
 
 
-def contours_to_svg_string(contours, width, height, fill_colour="none"):
+def contours_to_svg_string(contours, width, height, fill_colour="none",
+                           curved_lines=True):
     svg = ""
     svg += '<svg fill="%s" ' % fill_colour \
                + 'fill-opacity="0.5" ' \
                + 'width="' + str(width) + '" height="' + str(height) \
                + '" xmlns="http://www.w3.org/2000/svg">'
 
+    if curved_lines:
+        line_curve_style = "Q" # quadratic beziers
+    else:
+        line_curve_style = "M" # plain move
+
     for c in contours:
-        svg += '<path stroke-dasharray="5,5" stroke-width="4" d="M'
-        for i in range(len(c)):
-            x, y = c[i][0]
-            svg += "%d %d " % (x, y)
+        # Lightburn seems to require first point to be a move,
+        # e.g. pure curves don't get displayed
+#        svg += '<path stroke-dasharray="5,5" stroke-width="4" d="M'
+        svg += '<path stroke-width="1" d="M'
+        x, y = c[0][0]
+        svg += "%d %d " % (x, y)
+        if len(c) > 1:
+            svg += line_curve_style
+            for i in range(len(c) - 1):
+                x, y = c[i][0]
+                svg += "%d %d " % (x, y)
         svg += 'Z" style="stroke:%s"/>' % fill_colour
 
     # add registration markers
@@ -125,6 +144,12 @@ def parse_args():
                         type=float,
                         help="if specified, remove regions below this area, e.g. 1.23.  "
                              "Default is 0.001; only point-like regions are removed")
+    parser.add_argument("--no-curves",
+                        default=False,
+                        action="store_true",
+                        help="Default behaviour is to create regions with smooth lines."
+                             "This option disables that, leading to regions made from "
+                             "many short straight line.")
     parser.add_argument("--debug-output", "-d",
                         default="",
                         help="output debug image file")
