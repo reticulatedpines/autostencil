@@ -23,6 +23,12 @@ def main():
 
     light_to_white(image)
 
+    # If output file is .png, ensure it has an alpha channel.
+    # This allows us to feed it into st_png_to_svg.py directly.
+    # The image won't be very useful, but this helps during workflow testing.
+    if args.output.endswith(".png") or args.output.endswith(".PNG"):
+        image = cv.cvtColor(image, cv.COLOR_BGR2BGRA)
+
     cv.imwrite(args.output, image)
 
 
