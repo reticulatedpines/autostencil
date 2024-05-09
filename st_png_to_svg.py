@@ -72,7 +72,7 @@ def convert_rgba_to_contours(image, size_filter=0.0001, remove_nested=True):
         
     contours, hierarchy = cv.findContours(binary_image,
                                           contour_hierarchy,
-                                          cv.CHAIN_APPROX_SIMPLE)
+                                          cv.CHAIN_APPROX_NONE)
     # OpenCV hierarchy is an array of
     # [next, prev, first_child, parent] arrays.  A value of -1
     # means the element doesn't exist (e.g., -1 in next means no
@@ -108,7 +108,7 @@ def contours_to_svg_string(contours, width, height, fill_colour="none",
         svg += "%d %d " % (x, y)
         if len(c) > 1:
             svg += line_curve_style
-            for i in range(len(c) - 1):
+            for i in range(1, len(c)):
                 x, y = c[i][0]
                 svg += "%d %d " % (x, y)
         svg += 'Z" style="stroke:%s"/>' % fill_colour
