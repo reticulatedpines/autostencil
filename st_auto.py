@@ -32,7 +32,7 @@ def main():
 
     # st_split_layers, prior output -> set of single-colour layers
     image_a = cv.cvtColor(image, cv.COLOR_BGR2BGRA)
-    layers = st_split_layers.get_layers(image_a)
+    layers = st_split_layers.get_layers(image_a, split_more=True)
 
     # st_png_to_svg, each layer -> svg
     size_filter = image_size * 0.0001 # moderately aggressive trim of small regions
