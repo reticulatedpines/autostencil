@@ -7,19 +7,27 @@ import numpy as np
 
 def main():
     args = parse_args()
+    debug = args.debug
     image = cv.imread(args.input)
 
     dark_to_black(image)
 
     # colour contrast + brightness boost?
     contrast_brightness(image, contrast=args.contrast)
+    if debug:
+        cv.imwrite("con_bri.png", image)
 
     image = smooth_bilateral(image)
+    if debug:
+        cv.imwrite("smooth.png", image)
 
     mean_shift_segment(image)
+    if debug:
+        cv.imwrite("mss.png", image)
 
     image = kmeans(image, max_colours=args.colours)
-#    posterise(image)
+    if debug:
+        cv.imwrite("kmeans.png", image)
 
     light_to_white(image)
 
@@ -137,6 +145,9 @@ def parse_args():
                         default=1.4,
                         type=float,
                         help="Enhance or reduce contrast, default 1.4, an increase")
+    parser.add_argument("--debug",
+                        action="store_true",
+                        help="Save intermediate images, for debugging only")
 
     args = parser.parse_args()
     if not os.path.isfile(args.input):
