@@ -21,6 +21,10 @@ def main():
     if debug:
         cv.imwrite("smooth.png", image)
 
+#    image = colour_enhance(image)
+#    if debug:
+#        cv.imwrite("col_enhan.png", image)
+
     # do a first pass kmeans, this produces a grainy, dithered image,
     # but in limited palette, with high detail preservation
     image = kmeans(image, max_colours=args.colours)
@@ -58,6 +62,20 @@ def contrast_brightness(image, contrast:float=1.4, brightness:int=0):
     """
     brightness += int(round(255 * (1 - contrast) / 2))
     return cv.addWeighted(image, contrast, image, 0, brightness, image)
+
+
+def colour_enhance(image):
+    # CLAHE (Contrast Limited Adaptive Histogram Equalization)
+    clahe = cv.createCLAHE(clipLimit=1.1, tileGridSize=(8, 8))
+
+    lab = cv.cvtColor(image, cv.COLOR_BGR2LAB)
+    L, a, b = cv.split(lab)
+
+    L2 = clahe.apply(L)
+
+    lab = cv.merge((L2, a, b))
+    image = cv.cvtColor(lab, cv.COLOR_LAB2BGR)
+    return image
 
 
 def light_to_white(image):
