@@ -28,12 +28,19 @@ def main():
     # Do a first pass kmeans, this produces a grainy, dithered image,
     # but in limited palette, with high detail preservation.
     # LAB colour space seems to do better here.
-    image = cv.cvtColor(image, cv.COLOR_BGR2LAB)
-    image = kmeans(image, max_colours=args.colours)
-    image = cv.cvtColor(image, cv.COLOR_LAB2BGR)
+    small_image = image[::4, ::4, ::1] # 1/16th area image, faster for kmeans
+                                       # and we don't care about small areas of colour
+    small_image = cv.cvtColor(small_image, cv.COLOR_BGR2LAB)
+    small_image = kmeans(small_image, max_colours=args.colours)
+    small_image = cv.cvtColor(small_image, cv.COLOR_LAB2BGR)
     if debug:
-        cv.imwrite("kmeans_01.png", image)
-    palette = get_colours(image)
+        cv.imwrite("kmeans_01.png", small_image)
+    palette = get_colours(small_image)
+
+    # Quantise image to the palette
+    image = quantise_to_palette(image, palette)
+    if debug:
+        cv.imwrite("quant_pal_01.png", image)
 
     # cleanup the dithering with a fast MSS pass.
     # This will introduce lots of blended colours...
@@ -41,10 +48,10 @@ def main():
     if debug:
         cv.imwrite("mss.png", image)
 
-    # Quantise image to the palette found earlier
+    # Quantise image to the palette
     image = quantise_to_palette(image, palette)
     if debug:
-        cv.imwrite("quant_pal.png", image)
+        cv.imwrite("quant_pal_02.png", image)
 
     light_to_white(image)
 
@@ -64,13 +71,19 @@ def quantise_to_palette(image, palette):
     X_query = image.reshape(-1, 3).astype(np.float32)
     X_index = palette.astype(np.float32)
 
+    # find nearest in palette for each pixel
     knn = cv.ml.KNearest_create()
     knn.train(X_index, cv.ml.ROW_SAMPLE, np.arange(len(palette)))
     ret, results, neighbours, dist = knn.findNearest(X_query, 1)
 
-    quantised_image = np.array([palette[idx] for idx in neighbours.astype(int)])
-    quantised_image = quantised_image.reshape(image.shape)
-    return quantised_image
+    # replace image data with quantised values
+    neigh_int = neighbours.astype(np.uint8)
+    neigh_int = neigh_int.reshape(image.shape[0], image.shape[1], 1)
+    for i, p in enumerate(palette):
+        neigh_mask = cv.inRange(neigh_int, i, i)
+        image[neigh_mask > 0] = palette[i]
+
+    return image
 
 
 def contrast_brightness(image, contrast:float=1.4, brightness:int=0):
@@ -144,7 +157,7 @@ def kmeans(image, max_colours=6):
     return res.reshape((image.shape))
 
 
-def mean_shift_segment(image, spatial_grouping=5, colour_grouping=25):
+def mean_shift_segment(image, spatial_grouping=3, colour_grouping=25):
     # Higher: spatially "blur" over a wider radius.  Slower.
     # This one is quite subjective, so start low,
     # it's faster.
