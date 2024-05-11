@@ -35,11 +35,11 @@ def main():
     layers = st_split_layers.get_layers(image_a, split_more=True)
 
     # st_png_to_svg, each layer -> svg
-    size_filter = image_size * 0.0001 # moderately aggressive trim of small regions
+    size_filter = image_size * 0.00002 # low aggression trim of small regions
     con_w_h_colour = [st_png_to_svg.convert_rgba_to_contours(layer, size_filter=size_filter)
                             for layer in layers]
     SVGs = [st_png_to_svg.contours_to_svg_string(c[0], c[1], c[2], c[3])
-                for c in con_w_h_colour]
+                for c in con_w_h_colour if len(c[0]) > 0]
 
     # get output names for zip
     in_name = os.path.basename(args.input) # filename only
