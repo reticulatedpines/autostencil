@@ -101,11 +101,14 @@ def posterise(image, max_colours):
 
     image = st_posterise.smooth_bilateral(image)
 
+    image = cv.cvtColor(image, cv.COLOR_BGR2LAB)
     image = st_posterise.kmeans(image, max_colours=max_colours)
+    image = cv.cvtColor(image, cv.COLOR_LAB2BGR)
+    palette = st_posterise.get_colours(image)
 
     st_posterise.mean_shift_segment(image)
 
-    image = st_posterise.kmeans(image, max_colours=max_colours)
+    image = st_posterise.quantise_to_palette(image, palette)
 
     st_posterise.light_to_white(image)
     return image

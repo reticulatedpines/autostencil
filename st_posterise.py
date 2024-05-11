@@ -25,11 +25,15 @@ def main():
 #    if debug:
 #        cv.imwrite("col_enhan.png", image)
 
-    # do a first pass kmeans, this produces a grainy, dithered image,
-    # but in limited palette, with high detail preservation
+    # Do a first pass kmeans, this produces a grainy, dithered image,
+    # but in limited palette, with high detail preservation.
+    # LAB colour space seems to do better here.
+    image = cv.cvtColor(image, cv.COLOR_BGR2LAB)
     image = kmeans(image, max_colours=args.colours)
+    image = cv.cvtColor(image, cv.COLOR_LAB2BGR)
     if debug:
         cv.imwrite("kmeans_01.png", image)
+    palette = get_colours(image)
 
     # cleanup the dithering with a fast MSS pass.
     # This will introduce lots of blended colours...
@@ -37,11 +41,10 @@ def main():
     if debug:
         cv.imwrite("mss.png", image)
 
-    # Strip the blended colours with another kmeans pass,
-    # which also acts like a sharpen
-    image = kmeans(image, max_colours=args.colours)
+    # Quantise image to the palette found earlier
+    image = quantise_to_palette(image, palette)
     if debug:
-        cv.imwrite("kmeans_02.png", image)
+        cv.imwrite("quant_pal.png", image)
 
     light_to_white(image)
 
@@ -52,6 +55,22 @@ def main():
         image = cv.cvtColor(image, cv.COLOR_BGR2BGRA)
 
     cv.imwrite(args.output, image)
+
+
+# This works well but is somewhat slow.  Might be a good option to use if you
+# know your colours in advance, could use instead of the current
+# first kmeans step
+def quantise_to_palette(image, palette):
+    X_query = image.reshape(-1, 3).astype(np.float32)
+    X_index = palette.astype(np.float32)
+
+    knn = cv.ml.KNearest_create()
+    knn.train(X_index, cv.ml.ROW_SAMPLE, np.arange(len(palette)))
+    ret, results, neighbours, dist = knn.findNearest(X_query, 1)
+
+    quantised_image = np.array([palette[idx] for idx in neighbours.astype(int)])
+    quantised_image = quantised_image.reshape(image.shape)
+    return quantised_image
 
 
 def contrast_brightness(image, contrast:float=1.4, brightness:int=0):
@@ -145,13 +164,20 @@ def posterise(image):
               & (image < (i + 1) * 255 / n)] = i * 255 / (n - 1)
 
 
-def count_colours(image):
+def get_colours(image):
     b, g, r = cv.split(image)
-    combined_channels = b \
-                        + 1000 * (g + 1) \
-                        + 1000 * 1000 * (r + 1)
-    unique = np.unique(combined_channels)
-    return len(unique)
+    b = b.astype(np.uint32)
+    g = g.astype(np.uint32)
+    r = r.astype(np.uint32)
+    combined_channels = b + (g << 8) + (r << 16)
+    uniques = np.unique(combined_channels)
+    # unmunge and return in a sensible format
+    colours = []
+    for c in uniques:
+        colours.append([c & 0xff,
+                        (c >> 8) & 0xff,
+                        (c >> 16) & 0xff])
+    return np.array(colours).astype(np.uint8)
 
 
 def parse_args():
