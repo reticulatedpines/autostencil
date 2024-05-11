@@ -5,15 +5,32 @@ import argparse
 import cv2 as cv
 import numpy as np
 
+debug = False
+
+
 def main():
     args = parse_args()
+    global debug
     debug = args.debug
     image = cv.imread(args.input)
 
+    image = default_posterise(image, max_colours=args.colours,
+                              contrast=args.contrast)
+
+    # If output file is .png, ensure it has an alpha channel.
+    # This allows us to feed it into st_png_to_svg.py directly.
+    # The image won't be very useful, but this helps during workflow testing.
+    if args.output.endswith(".png") or args.output.endswith(".PNG"):
+        image = cv.cvtColor(image, cv.COLOR_BGR2BGRA)
+
+    cv.imwrite(args.output, image)
+
+
+def default_posterise(image, max_colours=6, contrast=1.4):
     dark_to_black(image)
 
     # colour contrast + brightness boost?
-    contrast_brightness(image, contrast=args.contrast)
+    contrast_brightness(image, contrast=contrast)
     if debug:
         cv.imwrite("con_bri.png", image)
 
@@ -31,7 +48,7 @@ def main():
     small_image = image[::4, ::4, ::1] # 1/16th area image, faster for kmeans
                                        # and we don't care about small areas of colour
     small_image = cv.cvtColor(small_image, cv.COLOR_BGR2LAB)
-    small_image = kmeans(small_image, max_colours=args.colours)
+    small_image = kmeans(small_image, max_colours=max_colours)
     small_image = cv.cvtColor(small_image, cv.COLOR_LAB2BGR)
     if debug:
         cv.imwrite("kmeans_01.png", small_image)
@@ -54,14 +71,7 @@ def main():
         cv.imwrite("quant_pal_02.png", image)
 
     light_to_white(image)
-
-    # If output file is .png, ensure it has an alpha channel.
-    # This allows us to feed it into st_png_to_svg.py directly.
-    # The image won't be very useful, but this helps during workflow testing.
-    if args.output.endswith(".png") or args.output.endswith(".PNG"):
-        image = cv.cvtColor(image, cv.COLOR_BGR2BGRA)
-
-    cv.imwrite(args.output, image)
+    return image
 
 
 # This works well but is somewhat slow.  Might be a good option to use if you

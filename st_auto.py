@@ -17,24 +17,15 @@ def main():
     args = parse_args()
     image = cv.imread(args.input)
 
-    # resize if it's large, or processing becomes very slow
-    MAX_SIZE = 2400000 # somewhat larger than 1920 * 1080
-    image_size = image.shape[0] * image.shape[1]
-    if image_size > MAX_SIZE:
-        area_shrink_ratio = image_size / MAX_SIZE
-        linear_shrink = math.sqrt(area_shrink_ratio)
-        image_small = cv.resize(image, (0,0), fx=1 / linear_shrink, fy=1 / linear_shrink)
-        image = image_small
-        image_size = image.shape[0] * image.shape[1]
-
     # st_posterise
-    image = posterise(image, max_colours=args.max_colours)
+    image = st_posterise.default_posterise(image, max_colours=args.max_colours)
 
     # st_split_layers, prior output -> set of single-colour layers
     image_a = cv.cvtColor(image, cv.COLOR_BGR2BGRA)
     layers = st_split_layers.get_layers(image_a, split_more=True)
 
     # st_png_to_svg, each layer -> svg
+    image_size = image.shape[0] * image.shape[1]
     size_filter = image_size * 0.00002 # low aggression trim of small regions
     con_w_h_colour = [st_png_to_svg.convert_rgba_to_contours(layer, size_filter=size_filter)
                             for layer in layers]
@@ -88,30 +79,6 @@ def parse_args():
         exit()
 
     return args
-
-
-def posterise(image, max_colours):
-    """
-    Using some often useful default pre-processing,
-    posterise the input image and return the result
-    """
-    st_posterise.dark_to_black(image)
-
-    st_posterise.contrast_brightness(image, contrast=1.4)
-
-    image = st_posterise.smooth_bilateral(image)
-
-    image = cv.cvtColor(image, cv.COLOR_BGR2LAB)
-    image = st_posterise.kmeans(image, max_colours=max_colours)
-    image = cv.cvtColor(image, cv.COLOR_LAB2BGR)
-    palette = st_posterise.get_colours(image)
-
-    st_posterise.mean_shift_segment(image)
-
-    image = st_posterise.quantise_to_palette(image, palette)
-
-    st_posterise.light_to_white(image)
-    return image
 
 
 if __name__ == "__main__":
