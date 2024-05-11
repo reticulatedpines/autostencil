@@ -101,6 +101,8 @@ def posterise(image, max_colours):
 
     image = st_posterise.smooth_bilateral(image)
 
+    image = st_posterise.kmeans(image, max_colours=max_colours)
+
     st_posterise.mean_shift_segment(image)
 
     image = st_posterise.kmeans(image, max_colours=max_colours)

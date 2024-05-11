@@ -21,13 +21,23 @@ def main():
     if debug:
         cv.imwrite("smooth.png", image)
 
+    # do a first pass kmeans, this produces a grainy, dithered image,
+    # but in limited palette, with high detail preservation
+    image = kmeans(image, max_colours=args.colours)
+    if debug:
+        cv.imwrite("kmeans_01.png", image)
+
+    # cleanup the dithering with a fast MSS pass.
+    # This will introduce lots of blended colours...
     mean_shift_segment(image)
     if debug:
         cv.imwrite("mss.png", image)
 
+    # Strip the blended colours with another kmeans pass,
+    # which also acts like a sharpen
     image = kmeans(image, max_colours=args.colours)
     if debug:
-        cv.imwrite("kmeans.png", image)
+        cv.imwrite("kmeans_02.png", image)
 
     light_to_white(image)
 
@@ -97,16 +107,16 @@ def kmeans(image, max_colours=6):
     return res.reshape((image.shape))
 
 
-def mean_shift_segment(image, spatial_grouping=30, colour_grouping=10):
-    # Higher: more accurate shapes, finer detail.  Slower.
+def mean_shift_segment(image, spatial_grouping=5, colour_grouping=25):
+    # Higher: spatially "blur" over a wider radius.  Slower.
     # This one is quite subjective, so start low,
     # it's faster.
-    spatial_distance = 45
+    spatial_distance = spatial_grouping
 
-    # lower: larger number of more detailed groups, slower.
+    # Lower: larger number of more detailed groups, slower.
     # Too low is "bitty" / grainy,
     # too high and groups tend to merge together.
-    colour_distance = 20
+    colour_distance = colour_grouping
     cv.pyrMeanShiftFiltering(image, spatial_distance, colour_distance, image)
 
 
